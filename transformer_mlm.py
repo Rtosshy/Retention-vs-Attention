@@ -63,8 +63,7 @@ class MultiHeadAttention(nn.Module):
         V = V.transpose(1, 2) # (batch_size, n_heads, seq_len, d_v)
 
         if mask is not None:
-            # mask: (batch_size, seq_len, seq_len)
-            mask = mask.unsqueeze(1) # (batch_size, 1, seq_len, seq_len)
+            # mask: (batch_size, 1, seq_len, seq_len)
             mask = mask.repeat(1, self.n_heads, 1, 1) # (batch_size, n_heads, seq_len, seq_len)
         
         # Apply attention
@@ -74,10 +73,10 @@ class MultiHeadAttention(nn.Module):
         context = context.transpose(1, 2) # (batch_size, seq_len, n_heads, d_v)
         # Ensure contiguous memory layout after transpose for the subsequent view operation
         context = context.contiguous() # (batch_size, seq_len, n_heads, d_v)
-        context = attention_output.view(batch_size, -1, self.d_model) # (batch_size, seq_len, d_model)
+        context = context.view(batch_size, -1, self.d_model) # (batch_size, seq_len, d_model)
 
         # Final linear projection
-        output = self.W_O(attention_output) # (batch_size, seq_len, d_model)
+        output = self.W_O(context) # (batch_size, seq_len, d_model)
 
         return output, attention_weights
 
@@ -106,7 +105,7 @@ class PositionalEncoding(nn.Module):
 
         # Create constant 'pe' matrix with values dependant on pos and i
         pe = torch.zeros(max_seq_length, d_model)
-        position = torch.arrange(0, max_seq_length, dtype=torch.float).unsqueeze(1) # (max_seq_length, 1)
+        position = torch.arange(0, max_seq_length, dtype=torch.float).unsqueeze(1) # (max_seq_length, 1)
 
         # The use of exponential and logarithm in div_term calculation:
         # 1. Direct calculation of 10000^(2i/d_model) would result in extremely large numbers
@@ -196,6 +195,7 @@ class TransformerMLM(nn.Module):
     def __init__(self, vocab_size, d_model=512, n_heads=8, n_layers=6, max_seq_len=512, dropout=0.1):
         super(TransformerMLM, self).__init__()
 
+        self.d_model = d_model
         d_ff = d_model * 4
 
         # Token Embedding Layer
@@ -227,7 +227,7 @@ class TransformerMLM(nn.Module):
             module.weight.data.normal_(mean=0.0, std=0.02)
             if isinstance(module, nn.Linear) and module.bias is not None:
                 module.bias.data.zero_()
-        elif isinstance(mocule, nn.LayerNorm):
+        elif isinstance(module, nn.LayerNorm):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
     
@@ -270,4 +270,25 @@ class TransformerMLM(nn.Module):
         logits = self.mlm_head(encoder_output)
 
         return logits
+
+def test_transformer_mlm():
+    vocab_size = 10000
+    d_model = 512
+    n_heads = 8
+    n_layers = 6
+    max_seq_len = 512
+    batch_size = 16
+
+    model = TransformerMLM(vocab_size, d_model, n_heads, n_layers, max_seq_len)
+    input_ids = torch.randint(0, vocab_size, (batch_size, max_seq_len))
+    attention_mask = torch.ones(batch_size, max_seq_len)
+
+    logits = model(input_ids, attention_mask)
+
+    assert logits.shape == (batch_size, max_seq_len, vocab_size), "Invalid shape"
+
+    print("PASSED")
+
+if __name__ == "__main__":
+    test_transformer_mlm()
 
