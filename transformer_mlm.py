@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import math
+import random
 
 # Scaled Dot-Product Attention
 class ScaledDotProductAttention(nn.Module):
@@ -272,20 +273,39 @@ class TransformerMLM(nn.Module):
         return logits
 
 def test_transformer_mlm():
-    vocab_size = 10000
+    vocab_size = 8
     d_model = 512
     n_heads = 8
     n_layers = 6
-    max_seq_len = 512
-    batch_size = 16
+    max_seq_len = 5
+    batch_size = 1
 
     model = TransformerMLM(vocab_size, d_model, n_heads, n_layers, max_seq_len)
-    input_ids = torch.randint(0, vocab_size, (batch_size, max_seq_len))
-    attention_mask = torch.ones(batch_size, max_seq_len)
+    input_ids = torch.randint(0, vocab_size, (batch_size, max_seq_len)) # (batch_size, max_seq_len)
+    attention_mask = torch.ones(batch_size, max_seq_len) # (batch_size, max_seq_len)
 
-    logits = model(input_ids, attention_mask)
+    mask = torch.zeros(batch_size, max_seq_len) # (batch_size, max_seq_len)
 
+    for i in range(batch_size):
+        random_index = random.randint(0, max_seq_len-1)
+        mask[i][random_index] = 1
+
+    print(f"Input: {input_ids} \nInput shape: {input_ids.shape}",)
+    print(f"Attention Mask: {attention_mask} \nAttention Mask shape: {attention_mask.shape}")
+    print(f"Mask: {mask} \nMask shape: {mask.shape}")
+
+    logits = model(input_ids, attention_mask) # (batch_size, max_seq_len, vocab_size)
     assert logits.shape == (batch_size, max_seq_len, vocab_size), "Invalid shape"
+    
+    probs = nn.Softmax(dim=-1)(logits) # (batch_size, max_seq_len, vocab_size)
+
+    masked_probs = probs * mask.unsqueeze(-1) # (batch_size, max_seq_len, vocab_size)
+
+    print(f"Logits: {logits} \nLogits shape: {logits.shape}")
+
+    print(f"Probabilities: {probs} \nProbabilities shape: {probs.shape}")
+
+    print(f"Masked Probabilities: {masked_probs} \nMasked Probabilities shape: {masked_probs.shape}")
 
     print("PASSED")
 
