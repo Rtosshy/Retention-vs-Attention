@@ -14,7 +14,6 @@ def tokenize_data(raw_datasets, checkpoint):
     # バッチごとにpaddingを行う場合
     # data_collator = DataCollatorWithPadding(tokenizer=tokenizer)
 
-
     tokenized_datasets = tokenized_datasets.remove_columns(["text", "token_type_ids"])
     tokenized_datasets.set_format("torch")
 

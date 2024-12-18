@@ -271,6 +271,25 @@ class TransformerMLM(nn.Module):
         logits = self.mlm_head(encoder_output)
 
         return logits
+    
+    def compute_loss(self, logits, labels):
+        """
+        Args:
+            logits: Prediction logits for each token position (batch_size, seq_len, vocab_size)
+            labels: Tensor of token ids (batch_size, seq_len)
+        Returns:
+            loss: Cross-entropy loss
+        """
+
+        loss_fn = nn.CrossEntropyLoss(ignore_index=-100)
+
+        # Flatten the logits and labels
+        logits_flat = logits.view(-1, logits.size(-1)) # (batch_size * seq_len, vocab_size)
+        labels_flat = labels.view(-1)  # (batch_size * seq_len)
+
+        loss = loss_fn(logits_flat, labels_flat)
+
+        return loss
 
 def test_transformer_mlm():
     vocab_size = 8

@@ -7,7 +7,7 @@ from create_mlm_data import create_mlm_data
 from icecream import ic
 
 
-def exec_preprocess(raw_datasets, checkpoint):
+def exec_preprocess(raw_datasets, checkpoint, batch_size=8):
     tokenizer, tokenized_datasets = tokenize_data(raw_datasets, checkpoint)
     masked_input_ids, mlm_labels = create_mlm_data(tokenized_datasets['input_ids'], tokenizer.mask_token_id, tokenizer.pad_token_id)
 
@@ -26,9 +26,9 @@ def exec_preprocess(raw_datasets, checkpoint):
     valid_dataset = valid_test['train']
     test_dataset = valid_test['test']
 
-    train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=8)
-    valid_dataloader = DataLoader(valid_dataset, batch_size=8)
-    test_dataloader = DataLoader(test_dataset, batch_size=8)
+    train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size)
+    valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size)
 
     dataloaders = [train_dataloader, valid_dataloader, test_dataloader]
     return tokenizer, dataloaders
