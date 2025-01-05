@@ -1,5 +1,3 @@
-import torch
-from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 from datasets import load_dataset, Dataset
 from tokenize_data import tokenize_data
@@ -7,8 +5,8 @@ from create_mlm_data import create_mlm_data
 from icecream import ic
 
 
-def exec_preprocess(raw_datasets, checkpoint, batch_size=8):
-    tokenizer, tokenized_datasets = tokenize_data(raw_datasets, checkpoint)
+def exec_preprocess(raw_datasets, checkpoint, batch_size=32, max_seq_len=128):
+    tokenizer, tokenized_datasets = tokenize_data(raw_datasets, checkpoint, max_seq_len)
     masked_input_ids, mlm_labels = create_mlm_data(tokenized_datasets['input_ids'], tokenizer.mask_token_id, tokenizer.pad_token_id)
 
     tokenized_dict = {
