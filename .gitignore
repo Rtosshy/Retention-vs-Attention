@@ -1,3 +1,6 @@
 __pycache__
-*.pth
-*.txt
+png
+step
+train_time
+transformer_models
+retnet_models

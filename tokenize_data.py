@@ -1,9 +1,8 @@
 from datasets import load_dataset
 from transformers import BertTokenizer, DataCollatorWithPadding
-from torch.utils.data import DataLoader
 from icecream import ic
 
-def tokenize_data(raw_datasets, checkpoint, max_length=128):
+def tokenize_data(raw_datasets, checkpoint, max_length=64):
 
     tokenizer = BertTokenizer.from_pretrained(checkpoint)
     def tokenize_function(example):

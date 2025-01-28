@@ -1,5 +1,6 @@
 import torch
 from torch.optim import AdamW
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from datasets import load_dataset
 import time
 # import wandb
@@ -8,9 +9,10 @@ from transformer_mlm import TransformerMLM
 from tqdm import tqdm  # tqdmをインポート
 from icecream import ic
 
-def train(epoch, model, optimizer, train_dataloader, valid_dataloader):
+def train(epoch, model, optimizer, scheduler, train_dataloader, valid_dataloader):
     ic("Start training")
     step_ppls = []
+    step_losses = []
     for i in range(epoch):
         model.train()
         print(f"Epoch {i}")
@@ -27,6 +29,7 @@ def train(epoch, model, optimizer, train_dataloader, valid_dataloader):
 
             # 損失を計算
             loss = model.compute_loss(logits, labels)
+            step_losses.append(loss.item())
             total_train_loss += loss.item()
             step_ppl = torch.exp(torch.tensor(loss.item()))
             step_ppls.append(step_ppl)
@@ -36,17 +39,19 @@ def train(epoch, model, optimizer, train_dataloader, valid_dataloader):
             loss.backward()
             optimizer.step()  # パラメータを更新
             optimizer.zero_grad()  # 勾配をゼロクリア
+            scheduler.step()
             j += 1
         
         avg_epoch_loss = total_train_loss / len(train_dataloader)
         train_ppl = torch.exp(torch.tensor(avg_epoch_loss))
+        print(f"Epoch {i} Train Loss: {avg_epoch_loss}")
         print(f"Epoch {i} Train PPL: {train_ppl}")
         end_time = time.time()
         epoch_time = end_time - start_time
         print(f"Epoch {i} Time: {epoch_time}")
 
-        with open("epoch_times5p5e.txt", "a") as f:
-            print(epoch_time, file=f)
+        # with open("epoch_times64ms5p5ecos.txt", "a") as f:
+        #     print(epoch_time, file=f)
 
         # 検証フェーズ
         model.eval()  # モデルを評価モードに設定
@@ -63,11 +68,16 @@ def train(epoch, model, optimizer, train_dataloader, valid_dataloader):
 
         avg_valid_loss = total_valid_loss / len(valid_dataloader)
         valid_ppl = torch.exp(torch.tensor(avg_valid_loss))
+        print(f"Epoch {i} Validation Loss: {avg_valid_loss}")
         print(f"Epoch {i} Validation PPL: {valid_ppl}")
 
-        torch.save(model.state_dict(), "model5p5e.pth")
+        torch.save(model.state_dict(), "model64ms5p5ecos.pth")
     
-    with open("step_ppls5p5e.txt", "w") as f:
+    with open("step_losses64ms5p5ecos.txt", "w") as f:
+        for step_loss in step_losses:
+            f.write(str(step_loss) + "\n")
+
+    with open("step_ppls64ms5p5ecos.txt", "w") as f:
         for step_ppl in step_ppls:
             f.write(str(step_ppl.item()) + "\n")
 
@@ -96,13 +106,13 @@ if __name__ == "__main__":
     # raw_datasets = raw_datasets.filter(lambda x: len(x["text"]) < 16)
 
     batch_size = 32
-    max_seq_len = 128
+    max_seq_len = 64
     d_model = 512
     n_heads = 8
     n_layers = 6
     ic(max_seq_len)
 
-    tokenizer, dataloaders = exec_preprocess(raw_datasets, checkpoint, batch_size, max_seq_len)
+    tokenizer, dataloaders = exec_preprocess(raw_datasets, checkpoint, max_seq_len, batch_size)
 
     vocab_size = tokenizer.vocab_size
     
@@ -113,6 +123,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     optimizer = AdamW(model.parameters(), lr=5e-5)
+    scheduler = CosineAnnealingLR(optimizer, T_max=len(train_dataloader), eta_min=1e-6)
 
-    train(5, model, optimizer, train_dataloader, valid_dataloader)
+    train(5, model, optimizer, scheduler, train_dataloader, valid_dataloader)
     eval(model, test_dataloader)

@@ -4,10 +4,9 @@ from tokenize_data import tokenize_data
 from create_mlm_data import create_mlm_data
 from icecream import ic
 
-
-def exec_preprocess(raw_datasets, checkpoint, batch_size=32, max_seq_len=128):
+def exec_preprocess(raw_datasets, checkpoint, max_seq_len, batch_size=32):
     tokenizer, tokenized_datasets = tokenize_data(raw_datasets, checkpoint, max_seq_len)
-    masked_input_ids, mlm_labels = create_mlm_data(tokenized_datasets['input_ids'], tokenizer.mask_token_id, tokenizer.pad_token_id)
+    masked_input_ids, mlm_labels = create_mlm_data(tokenized_datasets['input_ids'], tokenizer.mask_token_id, tokenizer.pad_token_id, tokenizer.cls_token_id, tokenizer.sep_token_id)
 
     tokenized_dict = {
         'input_ids': masked_input_ids,
